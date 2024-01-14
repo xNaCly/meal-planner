@@ -4,19 +4,28 @@ import (
 	"errors"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/xnacly/meal-planner/api/database"
 	"github.com/xnacly/meal-planner/api/models"
 	"github.com/xnacly/meal-planner/api/routes"
 )
 
 func main() {
 	databaseUrl := os.Getenv("MEAL_DATABASE")
+	// databaseUrl := "postgres://dbadmin:root@localhost:5432/mealplanner"
 	if len(databaseUrl) == 0 {
 		log.Fatalln("Missing MEAL_DATABASE env variable, required for database access")
 	}
+
+	err := database.Get().Init(databaseUrl)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	app := fiber.New(fiber.Config{
 		AppName:      "meal-planner",
 		ServerHeader: "meal-planner",
@@ -57,4 +66,11 @@ func main() {
 	})
 
 	log.Fatal(app.Listen(":8080"))
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt, os.Kill)
+	go func() {
+		for range c {
+			database.Get().Destroy()
+		}
+	}()
 }

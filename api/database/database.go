@@ -1,30 +1,31 @@
 package database
 
-import "github.com/xnacly/meal-planner/api/models"
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+)
 
 type Database struct {
-	storage map[int]models.Meal
+	conn *pgx.Conn
 }
 
-var internal *Database
+var internal *Database = &Database{}
 
 func Get() *Database {
-	if internal == nil {
-		return &Database{
-			storage: make(map[int]models.Meal),
-		}
-	}
 	return internal
 }
 
-func (d *Database) AddMeal(m models.Meal) {
-
+func (d *Database) Init(connStr string) error {
+	conn, err := pgx.Connect(context.Background(), connStr)
+	if err != nil {
+		return fmt.Errorf("Failed to connect to database: %w", err)
+	}
+	d.conn = conn
+	return nil
 }
 
-func (d *Database) RemoveMeal(m models.Meal) {
-
-}
-
-func (d *Database) RandomMeal(m models.Meal) {
-
+func (d *Database) Destroy() error {
+	return d.conn.Close(context.Background())
 }
